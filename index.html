@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Windmill AR Viewer</title>
+    <title>AR Viewer (Mobile & Desktop)</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
     <style>
@@ -19,22 +19,23 @@
       }
 
       model-viewer {
+        position: absolute;
         width: 100vw;
         height: 100vh;
+        top: 0;
+        left: 0;
+        display: block;
+        z-index: 1;
       }
 
-      .info-banner {
+      .camera-feed {
         position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 14px;
-        z-index: 10;
-        text-align: center;
-        max-width: 90%;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        object-fit: cover;
+        z-index: 0;
       }
 
       .rotate-buttons {
@@ -45,6 +46,7 @@
         display: flex;
         gap: 10px;
         z-index: 10;
+        display: none;
       }
 
       .rotate-btn {
@@ -61,26 +63,30 @@
         background-color: #005bb5;
       }
 
-      model-viewer::part(ar-button) {
-        background-color: #0078d7;
-        color: white;
-        font-size: 16px;
-        padding: 14px 28px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
+      .size-buttons {
         position: absolute;
-        bottom: 16px;
+        top: 20px;
         left: 50%;
         transform: translateX(-50%);
+        display: flex;
+        gap: 10px;
         z-index: 10;
       }
 
-      model-viewer::part(ar-button):hover {
+      .size-btn {
+        background-color: #0078d7;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 16px;
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      .size-btn:hover {
         background-color: #005bb5;
       }
 
-      /* Analyzing Overlay */
       .analyzing-overlay {
         position: absolute;
         top: 0;
@@ -126,7 +132,7 @@
       📱 Tap "Place Windmill on Floor" and move your phone to scan a surface.
     </div>
 
-    <!-- Model Viewer -->
+    <!-- Model Viewer (AR for mobile) -->
     <model-viewer
       id="windmill"
       src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
@@ -138,17 +144,24 @@
       shadow-intensity="1"
       camera-controls
       auto-rotate
-      exposure="1"
+      exposure="1.0" <!-- Increased exposure for better surface detection -->
       interaction-prompt="auto"
       ios-src=""
+      scale="0.1" <!-- Adjust initial scale for better placement -->
     >
       <button slot="ar-button">📍 Place Windmill on Floor</button>
     </model-viewer>
 
-    <!-- Rotate Buttons -->
+    <!-- Rotate Buttons (desktop) -->
     <div class="rotate-buttons">
       <button class="rotate-btn" onclick="rotateModel(-30)">⟲ Rotate Left</button>
       <button class="rotate-btn" onclick="rotateModel(30)">⟳ Rotate Right</button>
+    </div>
+
+    <!-- Size Adjustment Buttons -->
+    <div class="size-buttons">
+      <button class="size-btn" onclick="adjustSize(0.05)">⬆️ Increase Size</button>
+      <button class="size-btn" onclick="adjustSize(-0.05)">⬇️ Decrease Size</button>
     </div>
 
     <!-- Analyzing Overlay -->
@@ -157,16 +170,38 @@
       <div>🔍 Analyzing surface…<br />Move your device around</div>
     </div>
 
+    <!-- Camera Feed for Desktop -->
+    <video id="camera-feed" class="camera-feed" autoplay muted playsinline></video>
+
     <script>
       const modelViewer = document.getElementById("windmill");
       const analyzingOverlay = document.getElementById("analyzing");
+      const rotateButtons = document.querySelector('.rotate-buttons');
+      const cameraFeed = document.getElementById("camera-feed");
 
-      // Rotate model left or right
+      // Function to rotate the model (for desktop)
       function rotateModel(degrees) {
         const orbit = modelViewer.getCameraOrbit();
         const azimuth = parseFloat(orbit.theta.replace("deg", ""));
         const newAzimuth = azimuth + degrees;
         modelViewer.cameraOrbit = `${newAzimuth}deg ${orbit.phi} ${orbit.radius}`;
+      }
+
+      // Function to adjust the size of the model (automatically and manually)
+      function adjustSize(increment) {
+        let currentScale = parseFloat(modelViewer.getAttribute("scale") || "1");
+        let newScale = currentScale + increment;
+        modelViewer.setAttribute("scale", newScale);
+      }
+
+      // Set up camera feed for desktop
+      async function setupCameraFeed() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          cameraFeed.srcObject = stream;
+        } catch (err) {
+          console.error("Error accessing camera: ", err);
+        }
       }
 
       // Wait for WebXR session to start and hide the overlay
@@ -175,13 +210,26 @@
         console.log(status);
         if (status === "session-started") {
           analyzingOverlay.style.display = "none"; // Hide analyzing box
+          rotateButtons.style.display = "flex"; // Show rotate buttons once AR session starts
         } else if (status === "not-presenting") {
           analyzingOverlay.style.display = "flex"; // Show overlay if AR isn't started
+          rotateButtons.style.display = "none"; // Hide rotate buttons if AR is not active
         } else if (status === "failed") {
           alert("❌ AR not supported on this device. You can still view the 3D model.");
           analyzingOverlay.style.display = "none";
+          rotateButtons.style.display = "none"; // Hide rotate buttons if AR isn't available
         }
       });
+
+      // Check if the device is mobile or desktop
+      if (window.innerWidth < 768) {
+        // Mobile AR Setup
+        setupCameraFeed();
+        cameraFeed.style.display = "none"; // Hide camera feed if AR is present
+      } else {
+        // Desktop Camera Feed
+        setupCameraFeed();
+      }
 
       // Detect if WebXR is available
       if (!navigator.xr) {
