@@ -1,38 +1,67 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8" />
-  <title>Windmill AR Model</title>
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-  <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      background-color: #fff;
-    }
-    model-viewer {
-      width: 100vw;
-      height: 100vh;
-      background: #fff;
-    }
-  </style>
-</head>
-<body>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Windmill AR Placement</title>
+    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #fff;
+        overflow: hidden;
+        font-family: sans-serif;
+      }
 
-  <!-- Google-style AR viewer -->
-  <model-viewer
-    src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
-    alt="Windmill"
-    ar
-    ar-modes="webxr scene-viewer quick-look"
-    auto-rotate
-    camera-controls
-    shadow-intensity="1"
-    autoplay
-    exposure="1"
-  ></model-viewer>
+      model-viewer {
+        width: 100vw;
+        height: 100vh;
+        background-color: #fff;
+      }
 
-</body>
+      .ar-button {
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 12px 24px;
+        background-color: #0b74de;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 16px;
+        cursor: pointer;
+        z-index: 10;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      }
+
+      .ar-button:active {
+        background-color: #084e9c;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Model Viewer Component -->
+    <model-viewer
+      id="windmill"
+      src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
+      alt="Windmill Model"
+      ar
+      ar-placement="floor"
+      ar-modes="scene-viewer webxr quick-look"
+      camera-controls
+      auto-rotate
+      autoplay
+      shadow-intensity="1"
+      exposure="1"
+    >
+      <!-- The AR Button to place model -->
+      <button slot="ar-button" class="ar-button">
+        📍 Place Windmill Here
+      </button>
+    </model-viewer>
+
+  </body>
 </html>
