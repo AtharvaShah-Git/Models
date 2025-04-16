@@ -2,66 +2,147 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Windmill AR Placement</title>
+    <title>Windmill AR Viewer</title>
     <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
     <style>
       html, body {
         margin: 0;
         padding: 0;
         height: 100%;
-        background: #fff;
+        width: 100%;
         overflow: hidden;
         font-family: sans-serif;
+        background: #f0f0f0;
       }
 
       model-viewer {
         width: 100vw;
         height: 100vh;
-        background-color: #fff;
+        background-color: #f0f0f0;
       }
 
       .ar-button {
         position: absolute;
-        bottom: 20px;
+        bottom: 24px;
         left: 50%;
         transform: translateX(-50%);
-        padding: 12px 24px;
-        background-color: #0b74de;
+        padding: 14px 28px;
+        background-color: #0078d7;
         color: white;
-        border: none;
-        border-radius: 12px;
         font-size: 16px;
+        border: none;
+        border-radius: 8px;
         cursor: pointer;
         z-index: 10;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
       }
 
-      .ar-button:active {
-        background-color: #084e9c;
+      .ar-button:hover {
+        background-color: #005bb5;
+      }
+
+      #rotate-buttons {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .rotate-btn {
+        background-color: #ffffffcc;
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      }
+
+      #allow-camera {
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #28a745;
+        color: white;
+        padding: 12px 20px;
+        font-size: 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        z-index: 10;
+        display: none;
       }
     </style>
   </head>
   <body>
 
-    <!-- Model Viewer Component -->
+    <!-- Rotate Buttons -->
+    <div id="rotate-buttons">
+      <button class="rotate-btn" onclick="rotateModel(-30)">⟲</button>
+      <button class="rotate-btn" onclick="rotateModel(30)">⟳</button>
+    </div>
+
+    <!-- Allow Camera Button -->
+    <button id="allow-camera">Allow Camera Access</button>
+
+    <!-- 3D AR Model Viewer -->
     <model-viewer
       id="windmill"
       src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
-      alt="Windmill Model"
+      alt="3D Windmill Model"
       ar
-      ar-placement="floor"
       ar-modes="scene-viewer webxr quick-look"
+      ar-placement="floor"
       camera-controls
       auto-rotate
       autoplay
       shadow-intensity="1"
       exposure="1"
+      touch-action="pan-y"
     >
-      <!-- The AR Button to place model -->
-      <button slot="ar-button" class="ar-button">
-        📍 Place Windmill Here
-      </button>
+      <button slot="ar-button" class="ar-button">📍 Place Windmill on Floor</button>
     </model-viewer>
+
+    <script>
+      const modelViewer = document.querySelector("#windmill");
+      const allowButton = document.getElementById("allow-camera");
+
+      // Rotate model left or right
+      function rotateModel(degrees) {
+        const currentRotation = modelViewer.rotationY || 0;
+        modelViewer.rotationY = currentRotation + degrees;
+        modelViewer.cameraOrbit = `${modelViewer.rotationY}deg 75deg auto`;
+      }
+
+      // Ask for camera permission via alert
+      window.addEventListener("load", () => {
+        alert("📷 This app uses your camera to place a 3D model in real space. Click 'Allow Camera Access' below if prompted.");
+        allowButton.style.display = "block";
+      });
+
+      allowButton.addEventListener("click", () => {
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then((stream) => {
+            allowButton.style.display = "none";
+            // stop stream, model-viewer will handle camera access later
+            stream.getTracks().forEach(track => track.stop());
+          })
+          .catch((err) => {
+            alert("⚠️ Camera access denied. You won’t be able to use AR features.");
+          });
+      });
+
+      modelViewer.addEventListener('ar-status', (event) => {
+        if (event.detail.status === 'failed') {
+          alert('❌ AR not supported on this device. You can still view and interact with the model.');
+        }
+      });
+    </script>
 
   </body>
 </html>
