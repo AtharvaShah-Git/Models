@@ -1,147 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Windmill AR Viewer</title>
-    <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-    <style>
-      html, body {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        width: 100%;
-        font-family: sans-serif;
-        background-color: #f9f9f9;
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Windmill AR Viewer</title>
+
+  <!-- Import model-viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #f1f1f1;
+      font-family: sans-serif;
+    }
+
+    model-viewer {
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .info-banner {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 10;
+      text-align: center;
+      max-width: 90%;
+    }
+
+    .rotate-buttons {
+      position: absolute;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .rotate-btn {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    .rotate-btn:hover {
+      background-color: #005bb5;
+    }
+
+    model-viewer::part(ar-button) {
+      background-color: #0078d7;
+      color: white;
+      font-size: 16px;
+      padding: 14px 28px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+
+    model-viewer::part(ar-button):hover {
+      background-color: #005bb5;
+    }
+
+    /* Analyzing Overlay */
+    .analyzing-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      color: white;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .scan-box {
+      width: 150px;
+      height: 150px;
+      border: 3px solid #00aaff;
+      border-radius: 10px;
+      animation: pulse 1.5s infinite alternate;
+      box-shadow: 0 0 10px #00aaff, 0 0 20px #00aaff inset;
+      margin-bottom: 20px;
+    }
+
+    @keyframes pulse {
+      from {
+        transform: scale(1);
+        opacity: 0.8;
       }
-
-      model-viewer {
-        width: 100vw;
-        height: 100vh;
-        --ar-button-display: none;
+      to {
+        transform: scale(1.1);
+        opacity: 1;
       }
+    }
+  </style>
+</head>
+<body>
 
-      .ar-button {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 14px 28px;
-        background-color: #0078d7;
-        color: white;
-        font-size: 16px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        z-index: 10;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  <!-- Info Banner -->
+  <div class="info-banner">
+    📱 Tap "Place Windmill on Floor" and move your phone to scan a surface.
+  </div>
+
+  <!-- Model Viewer -->
+  <model-viewer
+    id="windmill"
+    src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
+    alt="3D Windmill"
+    ar
+    ar-placement="floor"
+    ar-modes="webxr scene-viewer quick-look"
+    environment-image="neutral"
+    shadow-intensity="1"
+    camera-controls
+    auto-rotate
+    exposure="1"
+    interaction-prompt="auto"
+    ios-src=""
+  >
+    <button slot="ar-button">📍 Place Windmill on Floor</button>
+  </model-viewer>
+
+  <!-- Rotate Buttons -->
+  <div class="rotate-buttons">
+    <button class="rotate-btn" onclick="rotateModel(-30)">⟲ Rotate Left</button>
+    <button class="rotate-btn" onclick="rotateModel(30)">⟳ Rotate Right</button>
+  </div>
+
+  <!-- Analyzing Overlay -->
+  <div class="analyzing-overlay" id="analyzing">
+    <div class="scan-box"></div>
+    <div>🔍 Analyzing surface…<br />Move your device around</div>
+  </div>
+
+  <script>
+    const modelViewer = document.getElementById("windmill");
+    const analyzingOverlay = document.getElementById("analyzing");
+
+    function rotateModel(degrees) {
+      const orbit = modelViewer.getCameraOrbit();
+      const azimuth = parseFloat(orbit.theta.replace("deg", ""));
+      const newAzimuth = azimuth + degrees;
+      modelViewer.cameraOrbit = `${newAzimuth}deg ${orbit.phi} ${orbit.radius}`;
+    }
+
+    modelViewer.addEventListener('ar-status', (event) => {
+      const status = event.detail.status;
+      if (status === 'session-started') {
+        // Hide overlay when AR starts
+        analyzingOverlay.style.display = 'none';
+      } else if (status === 'not-presenting') {
+        // Show overlay again if AR session ends
+        analyzingOverlay.style.display = 'flex';
+      } else if (status === 'failed') {
+        alert("❌ AR not supported on this device. You can still view the 3D model.");
+        analyzingOverlay.style.display = 'none';
       }
+    });
+  </script>
 
-      .rotate-btns {
-        position: absolute;
-        top: 16px;
-        right: 16px;
-        z-index: 10;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .rotate-btn {
-        background-color: #ffffffcc;
-        border: 1px solid #ccc;
-        padding: 10px;
-        border-radius: 50%;
-        cursor: pointer;
-        font-size: 18px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-      }
-
-      .info-banner {
-        position: absolute;
-        top: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #ffffffcc;
-        padding: 10px 20px;
-        border-radius: 6px;
-        z-index: 10;
-        font-size: 14px;
-        color: #000;
-        text-align: center;
-        max-width: 90vw;
-      }
-
-      .control-btn {
-        background-color: #007bff;
-        color: white;
-        padding: 12px 18px;
-        border: none;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      }
-
-      .control-btn:hover {
-        background-color: #0056b3;
-      }
-    </style>
-  </head>
-  <body>
-
-    <div class="info-banner">
-      📱 Tap “Place Windmill on Floor” and move your phone to scan a flat surface. <br>
-      💡 Use rotate buttons if needed.
-    </div>
-
-    <!-- Main AR model-viewer component -->
-    <model-viewer
-      id="ar-model"
-      src="https://cdn.glitch.global/8e7edd8a-04fa-4a65-bfc4-313ed13ec5d3/Tower%20Windmill.glb?v=1744801779342"
-      alt="3D Windmill Model"
-      ar
-      ar-modes="scene-viewer webxr quick-look"
-      ar-placement="floor"
-      camera-controls
-      auto-rotate
-      shadow-intensity="1"
-      exposure="1"
-      touch-action="pan-y"
-      autoplay
-      ios-src=""
-    >
-      <button slot="ar-button" class="ar-button">📍 Place Windmill on Floor</button>
-    </model-viewer>
-
-    <!-- Rotate Buttons -->
-    <div class="rotate-btns">
-      <button class="rotate-btn" onclick="rotateModel(-30)">⟲</button>
-      <button class="rotate-btn" onclick="rotateModel(30)">⟳</button>
-    </div>
-
-    <script>
-      const viewer = document.getElementById("ar-model");
-
-      // Model rotation logic
-      function rotateModel(degrees) {
-        const orbit = viewer.getCameraOrbit();
-        const parts = orbit.toString().split(" ");
-        const azimuth = parseFloat(parts[0].replace("deg", ""));
-        const newAzimuth = azimuth + degrees;
-        viewer.cameraOrbit = `${newAzimuth}deg ${parts[1]} ${parts[2]}`;
-      }
-
-      // Camera alert and fallback
-      window.addEventListener("load", () => {
-        alert("📷 This website uses your camera to place a model in real space. Please grant camera access when prompted.");
-      });
-
-      // Show fallback if AR is unsupported
-      viewer.addEventListener("ar-status", (event) => {
-        if (event.detail.status === 'failed') {
-          alert("❌ AR not supported on this device. You can still view the 3D model.");
-        }
-      });
-    </script>
-  </body>
+</body>
 </html>
